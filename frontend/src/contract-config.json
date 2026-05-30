@@ -1,0 +1,10 @@
+{
+  "contractId": "CBTIROMGIFJFJBXHPXD6LJX4AR4BOZOR6BJJ2BYN23SDJ4MNYWOQZB6W",
+  "wasmHash": "4bcfbfd910bf04b2974d99a94da07f604b6b89fd5ce76d0fe605bb91efac04ed",
+  "network": "testnet",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "deployerPublicKey": "GA4I6YFTACGUJDNCBEMTH5VIYJ6ILIEJVHLRR7QJCOUL5U66U6KEYIEV",
+  "nativeTokenContractId": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  "deployTimestamp": "2026-05-30T19:39:16.155Z"
+}

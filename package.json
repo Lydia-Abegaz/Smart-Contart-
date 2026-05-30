@@ -1,0 +1,17 @@
+{
+  "name": "no-loss-auction-deploy",
+  "version": "1.0.0",
+  "description": "Deployment script and build tools for Soroban Smart Contract",
+  "main": "scripts/deploy.js",
+  "type": "module",
+  "scripts": {
+    "deploy": "node scripts/deploy.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.1.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "binaryen": "^129.0.0"
+  }
+}
