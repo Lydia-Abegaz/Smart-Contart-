@@ -606,14 +606,17 @@ function App() {
                 <div style={{ display: "flex", justifyContent: "between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1rem" }}>
                   <div style={{ textAlign: "left" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <h2 style={{ fontSize: "1.75rem", color: "white" }}>{contractState.title}</h2>
-                      {contractState.cancelled ? (
+                      <h2 style={{ fontSize: "1.75rem", color: "white" }}>{contractState?.title || "Auction"}</h2>
+                      {contractState.cancelled && (
                         <span className="status-badge status-cancelled">Cancelled</span>
-                      ) : contractState.finalized ? (
+                      )}
+                      {!contractState.cancelled && contractState.finalized && (
                         <span className="status-badge status-finalized">Finalized</span>
-                      ) : timeRemaining.total === 0 ? (
+                      )}
+                      {!contractState.cancelled && !contractState.finalized && timeRemaining.total === 0 && (
                         <span className="status-badge status-pending">Ended (Pending Close)</span>
-                      ) : (
+                      )}
+                      {!contractState.cancelled && !contractState.finalized && timeRemaining.total > 0 && (
                         <span className="status-badge status-active">
                           <span className="pulse-dot"></span> Active
                         </span>

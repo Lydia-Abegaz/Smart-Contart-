@@ -112,10 +112,11 @@ export async function getAuctionState() {
       return state;
     }
     
-    throw new Error('Failed to parse auction state');
+    return null;
   } catch (error) {
     console.error('Error getting auction state:', error);
-    throw error;
+    // Return null instead of throwing so the UI can handle it gracefully
+    return null;
   }
 }
 

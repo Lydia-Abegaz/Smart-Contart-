@@ -8,6 +8,15 @@ function PlaceBid({ auctionState, onBidPlaced }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  if (!auctionState) {
+    return (
+      <div className="place-bid disabled">
+        <h2>Place Bid</h2>
+        <p>No auction available</p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
