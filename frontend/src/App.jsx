@@ -34,6 +34,7 @@ function App() {
   // Application State
   const [contractState, setContractState] = useState(null);
   const [loadingState, setLoadingState] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [walletType, setWalletType] = useState("sandbox"); // 'sandbox' or 'freighter'
   
   // Accounts
@@ -167,6 +168,7 @@ function App() {
   // Fetch Contract State via Simulation
   const fetchContractState = async () => {
     try {
+      setFetchError(null);
       const dummyPublicKey = "GDWF6ZWYNYLVBI37DAY2E2HIIYEPQEZIVOP2JTSKUSJJIJYCXBTP5NRE";
       const dummyAccount = new StellarSDK.Account(dummyPublicKey, "0");
       
@@ -192,13 +194,26 @@ function App() {
           setContractState({ uninitialized: true });
         } else {
           console.error("Simulation error:", sim.error);
+          setFetchError(`Simulation error: ${sim.error}`);
         }
-      } else if (sim.results && sim.results[0]) {
-        const state = StellarSDK.scValToNative(sim.results[0].retval);
-        setContractState(state);
+      } else {
+        let retval = null;
+        if (sim.result && sim.result.retval) {
+          retval = sim.result.retval;
+        } else if (sim.results && sim.results[0]) {
+          retval = sim.results[0].retval;
+        }
+
+        if (retval) {
+          const state = StellarSDK.scValToNative(retval);
+          setContractState(state);
+        } else {
+          setFetchError("No state returned from contract simulation.");
+        }
       }
     } catch (e) {
       console.error("Failed to fetch state:", e);
+      setFetchError(e.message || "Failed to connect to Soroban contract");
     } finally {
       setLoadingState(false);
     }
@@ -223,8 +238,16 @@ function App() {
         .build();
 
       const sim = await server.simulateTransaction(tx);
-      if (sim.results && sim.results[0]) {
-        const balanceBig = StellarSDK.scValToNative(sim.results[0].retval);
+      
+      let retval = null;
+      if (sim.result && sim.result.retval) {
+        retval = sim.result.retval;
+      } else if (sim.results && sim.results[0]) {
+        retval = sim.results[0].retval;
+      }
+
+      if (retval) {
+        const balanceBig = StellarSDK.scValToNative(retval);
         return Number(balanceBig) / 10000000;
       }
       return 0;
@@ -573,6 +596,21 @@ function App() {
                 <div className="spinner"></div>
                 <span style={{ color: "var(--text-secondary)" }}>Querying Soroban contract state...</span>
               </div>
+            ) : fetchError && !contractState ? (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                <AlertTriangle size={48} style={{ color: "#ef4444", margin: "0 auto 1rem" }} />
+                <h2>Failed to Load Smart Contract</h2>
+                <p style={{ color: "var(--text-secondary)", margin: "0.5rem 0 1.5rem" }}>
+                  {fetchError}
+                </p>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ margin: "0 auto" }} 
+                  onClick={() => { setLoadingState(true); fetchContractState(); }}
+                >
+                  <RefreshCw size={14} style={{ marginRight: "0.5rem" }} /> Retry Connection
+                </button>
+              </div>
             ) : contractState?.uninitialized ? (
               <div style={{ textAlign: "center", padding: "2rem" }}>
                 <AlertTriangle size={48} style={{ color: "#fbbf24", margin: "0 auto 1rem" }} />
@@ -607,16 +645,16 @@ function App() {
                   <div style={{ textAlign: "left" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                       <h2 style={{ fontSize: "1.75rem", color: "white" }}>{contractState?.title || "Auction"}</h2>
-                      {contractState.cancelled && (
+                      {contractState?.cancelled && (
                         <span className="status-badge status-cancelled">Cancelled</span>
                       )}
-                      {!contractState.cancelled && contractState.finalized && (
+                      {!contractState?.cancelled && contractState?.finalized && (
                         <span className="status-badge status-finalized">Finalized</span>
                       )}
-                      {!contractState.cancelled && !contractState.finalized && timeRemaining.total === 0 && (
+                      {!contractState?.cancelled && !contractState?.finalized && timeRemaining.total === 0 && (
                         <span className="status-badge status-pending">Ended (Pending Close)</span>
                       )}
-                      {!contractState.cancelled && !contractState.finalized && timeRemaining.total > 0 && (
+                      {!contractState?.cancelled && !contractState?.finalized && timeRemaining.total > 0 && (
                         <span className="status-badge status-active">
                           <span className="pulse-dot"></span> Active
                         </span>
@@ -630,7 +668,7 @@ function App() {
                     <span className="detail-label">Current Highest Bid</span>
                     <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
                       <span style={{ fontSize: "2rem", fontWeight: "800", color: "var(--accent-pink)" }}>
-                        {(Number(contractState.highest_bid) / 10000000).toFixed(2)}
+                        {(Number(contractState?.highest_bid || 0) / 10000000).toFixed(2)}
                       </span>
                       <span style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>XLM</span>
                     </div>
@@ -638,7 +676,7 @@ function App() {
 
                   <div className="detail-item" style={{ textAlign: "left" }}>
                     <span className="detail-label">Highest Bidder Address</span>
-                    {contractState.highest_bidder ? (
+                    {contractState?.highest_bidder ? (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
                         <code className="detail-value-mono">{contractState.highest_bidder.substring(0, 14)}...</code>
                         <button className="copy-btn" onClick={() => handleCopy(contractState.highest_bidder, "Bidder")}>
@@ -652,12 +690,12 @@ function App() {
 
                   <div className="detail-item" style={{ textAlign: "left" }}>
                     <span className="detail-label">Minimum Bid</span>
-                    <span className="detail-value">{(Number(contractState.min_bid) / 10000000).toFixed(2)} XLM</span>
+                    <span className="detail-value">{(Number(contractState?.min_bid || 0) / 10000000).toFixed(2)} XLM</span>
                   </div>
 
                   <div className="detail-item" style={{ textAlign: "left" }}>
                     <span className="detail-label">Time Remaining</span>
-                    {!contractState.finalized && !contractState.cancelled && timeRemaining.total > 0 ? (
+                    {!contractState?.finalized && !contractState?.cancelled && timeRemaining.total > 0 ? (
                       <div className="countdown-box">
                         <div className="countdown-unit">
                           <span className="countdown-number">{timeRemaining.hours.toString().padStart(2, "0")}</span>
@@ -674,7 +712,7 @@ function App() {
                       </div>
                     ) : (
                       <span className="detail-value" style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                        {contractState.finalized ? "Auction Finalized" : contractState.cancelled ? "Auction Cancelled" : "Deadline Reached"}
+                        {contractState?.finalized ? "Auction Finalized" : contractState?.cancelled ? "Auction Cancelled" : "Deadline Reached"}
                       </span>
                     )}
                   </div>
@@ -682,7 +720,7 @@ function App() {
 
                 {/* Interact Panel: Bidding or Admin actions */}
                 <div style={{ marginTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.5rem" }}>
-                  {!contractState.finalized && !contractState.cancelled && timeRemaining.total > 0 ? (
+                  {!contractState?.finalized && !contractState?.cancelled && timeRemaining.total > 0 ? (
                     <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-end" }}>
                       <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
                         <label>Place a Bid (Amount in XLM)</label>
@@ -691,7 +729,7 @@ function App() {
                             className="input-field" 
                             type="number" 
                             step="any"
-                            placeholder={`Min Bid: ${(Math.max(Number(contractState.highest_bid) / 10000000 + 0.001, Number(contractState.min_bid) / 10000000)).toFixed(3)} XLM`}
+                            placeholder={`Min Bid: ${(Math.max(Number(contractState?.highest_bid || 0) / 10000000 + 0.001, Number(contractState?.min_bid || 0) / 10000000)).toFixed(3)} XLM`}
                             value={bidAmount} 
                             onChange={e => setBidAmount(e.target.value)} 
                           />
@@ -705,20 +743,20 @@ function App() {
                   ) : null}
 
                   {/* Owner Control Actions */}
-                  {getActiveAddress() === contractState.owner && (
+                  {getActiveAddress() === contractState?.owner && (
                     <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
-                      {!contractState.finalized && !contractState.cancelled && (
+                      {!contractState?.finalized && !contractState?.cancelled && (
                         <button 
                           className="btn btn-danger"
                           onClick={handleCancel}
-                          disabled={actionLoading || contractState.highest_bidder !== null}
-                          title={contractState.highest_bidder ? "Cannot cancel once bids are placed" : ""}
+                          disabled={actionLoading || contractState?.highest_bidder !== null}
+                          title={contractState?.highest_bidder ? "Cannot cancel once bids are placed" : ""}
                         >
                           Cancel Auction
                         </button>
                       )}
 
-                      {!contractState.finalized && !contractState.cancelled && timeRemaining.total === 0 && (
+                      {!contractState?.finalized && !contractState?.cancelled && timeRemaining.total === 0 && (
                         <button 
                           className="btn btn-primary" 
                           style={{ background: "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
